@@ -161,6 +161,7 @@ static void lowerthirds_get_defaults(obs_data_t *settings)
 	obs_data_release(font_obj);
 	
 	obs_data_set_default_bool(settings, "visible", false);
+	obs_data_set_default_int(settings, "dock_trigger", -1); // -1=none, 0-4=play tab, 5=hide (used by dock panel)
 	obs_data_set_default_bool(settings, "bold", true);
 	obs_data_set_default_bool(settings, "auto_hide", true);
 	obs_data_set_default_double(settings, "duration", 5.0);
@@ -847,6 +848,25 @@ lowerthirds_source::~lowerthirds_source()
 
 void lowerthirds_source::update(obs_data_t *settings)
 {
+	// Handle dock panel trigger (Play Tab 1-5 or Hide from the dock)
+	int dock_trigger = (int)obs_data_get_int(settings, "dock_trigger");
+	if (dock_trigger >= 0) {
+		if (dock_trigger <= 4) {
+			is_visible = false;
+			animation_progress = 0.0f;
+			current_profile = dock_trigger;
+			update_text_sources();
+			force_replay = true;
+			display_timer = 0.0f;
+			is_visible = true;
+		} else if (dock_trigger == 5) {
+			is_visible = false;
+			display_timer = 0.0f;
+			force_replay = false;
+		}
+		obs_data_set_int(settings, "dock_trigger", -1);
+	}
+
 	// Load all 5 profiles' text content
 	const char *profile_names[] = {"profile1", "profile2", "profile3", "profile4", "profile5"};
 	

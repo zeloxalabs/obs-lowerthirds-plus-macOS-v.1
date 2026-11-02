@@ -11,6 +11,10 @@
 #include <obs-module.h>
 #include "lowerthirds-source-simple.hpp"
 
+#ifdef LOWERTHIRDS_HAS_DOCK
+#include "lowerthirds-dock.hpp"
+#endif
+
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("LowerThirdsPlus", "en-US")
 
@@ -18,8 +22,11 @@ bool obs_module_load(void)
 {
 	blog(LOG_INFO, "LowerThirdsPlus v1.0 by Y Phic Hdok (MTD Technologies) - Plugin loaded");
 	
-	// Register the source type
 	register_lowerthirds_source();
+
+#ifdef LOWERTHIRDS_HAS_DOCK
+	register_lowerthirds_dock();
+#endif
 	
 	return true;
 }

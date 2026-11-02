@@ -99,6 +99,6 @@ echo "  ~/Library/Application Support/obs-studio/plugins/LowerThirdsPlus.plugin/
 echo ""
 echo "Next steps:"
 echo "  1. Launch OBS Studio"
-echo "  2. Add a 'LowerThirdsPlusSource' to your scene"
-echo "  3. Open the control panel: View → Docks → Lower Thirds Control"
+echo "  2. Add a 'Lower Thirds Plus Source' to your scene"
+echo "  3. Right-click source → Properties to configure (▶ Play buttons for each tab)"
 echo ""

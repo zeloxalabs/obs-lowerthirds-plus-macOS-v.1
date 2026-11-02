@@ -1,0 +1,59 @@
+# Build LowerThirdsPlus plugin for macOS on GitHub-hosted runners.
+# Produces LowerThirdsPlus.plugin as an artifact (no Docker; macOS runners only).
+
+name: Build macOS
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone OBS Studio
+        run: |
+          git clone --depth 1 --branch 30.2.0 --recursive https://github.com/obsproject/obs-studio.git "$GITHUB_WORKSPACE/obs-studio"
+
+      - name: Configure OBS (macOS preset)
+        run: |
+          cd "$GITHUB_WORKSPACE/obs-studio"
+          cmake --preset macos
+
+      - name: Build OBS Studio
+        run: |
+          cd "$GITHUB_WORKSPACE/obs-studio/build_macos"
+          xcodebuild -configuration Release -scheme obs-studio \
+            -destination 'generic/platform=macOS' \
+            -parallelizeTargets \
+            CODE_SIGN_IDENTITY="-"
+
+      - name: Build LowerThirdsPlus plugin
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/build" && cd "$GITHUB_WORKSPACE/build"
+          cmake .. \
+            -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOBS_PATH="$GITHUB_WORKSPACE/obs-studio" \
+            -DOBS_BUILD_DIR="$GITHUB_WORKSPACE/obs-studio/build_macos"
+          cmake --build . --config Release
+
+      - name: Pack plugin (zip + DMG)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          ./pack.sh 1.0
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LowerThirdsPlus-macOS
+          path: |
+            build/**/LowerThirdsPlus.plugin
+            LowerThirdsPlus-v*.zip
+            LowerThirdsPlus-v*.dmg

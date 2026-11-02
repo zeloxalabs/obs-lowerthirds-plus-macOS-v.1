@@ -1,0 +1,24 @@
+# Run from repo root: docker compose -f docker/docker-compose.yml up
+services:
+  obs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: runtime
+    image: lowerthirdsplus-obs
+    stdin_open: true
+    tty: true
+
+  # Build plugin only and copy out
+  plugin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+    image: lowerthirdsplus-builder
+    volumes:
+      - plugin-output:/output
+    command: sh -c 'cp -v /plugin/build/*.so /output/ 2>/dev/null; ls -la /output/'
+
+volumes:
+  plugin-output:

@@ -1,0 +1,13 @@
+# Avoid copying build artifacts and git into the image
+build/
+.git/
+.gitignore
+*.dmg
+Distribution/
+*.md
+!README.md
+
+# Local macOS build and IDE
+.DS_Store
+*.xcodeproj
+*.xcworkspace

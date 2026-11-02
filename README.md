@@ -72,6 +72,23 @@ The DMG includes:
 # ~/Library/Application Support/obs-studio/plugins/LowerThirdsPlus.plugin
 ```
 
+### Pack distributable (zip + DMG)
+
+After building, create a distributable package for end users:
+
+```bash
+./pack.sh [VERSION]
+
+# Example (default version 1.0):
+./pack.sh
+# Creates: LowerThirdsPlus-v1.0-macOS.zip and LowerThirdsPlus-v1.0-macOS.dmg
+
+# Custom version:
+./pack.sh 1.1
+```
+
+The pack includes the plugin bundle, installer script (`INSTALL.command`), and docs from `Distribution/`. CI (Build macOS workflow) runs `pack.sh` and uploads the zip and DMG as artifacts.
+
 ---
 
 ## 📖 Usage
@@ -155,6 +172,8 @@ The DMG includes:
 
 ```
 LowerThirdsPlus/
+├── .github/workflows/
+│   └── build-macos.yml                 # CI: build macOS plugin on push/PR
 ├── src/
 │   ├── plugin-main-simple.cpp          # Plugin entry point
 │   ├── lowerthirds-source-simple.cpp   # Source implementation
@@ -165,10 +184,70 @@ LowerThirdsPlus/
 │   └── en-US.ini                       # Localization
 ├── obs-headers/                        # OBS API headers
 ├── CMakeLists.txt                      # Build configuration
+├── docker/                              # Docker (own folder): Dockerfile, README, docker-compose
 ├── Info.plist.in                       # macOS bundle info
-├── build.sh                            # Build script
+├── build.sh                            # Build script (macOS)
+├── pack.sh                             # Pack plugin → zip + DMG
 └── README.md                           # This file
 ```
+
+---
+
+## 🐳 Building with Docker (Linux plugin)
+
+You can build the **Linux** version of the plugin inside Docker (no local OBS or macOS required). The image builds OBS’s `libobs` from source, then compiles LowerThirdsPlus.
+
+Docker lives in **`docker/`**. You **build and run everything as Docker** — no OBS or “add source” on your host. See **`docker/README.md`** for full usage.
+
+### Build and run as Docker (recommended)
+```bash
+./docker/build-and-run.sh
+```
+Builds the image (plugin + OBS) and runs OBS with Lower Thirds Plus inside the container.
+
+### Option A: Copy out the plugin .so only
+
+```bash
+# Build from repo root (first time: 10–20 min)
+docker build -f docker/Dockerfile -t lowerthirdsplus .
+
+# Copy the built plugin to your machine
+mkdir -p output
+docker run --rm -v "$(pwd)/output:/output" lowerthirdsplus
+# Plugin is in ./output/libLowerThirdsPlus.so (or LowerThirdsPlus.so)
+```
+
+Place the `.so` in OBS’s plugin directory (e.g. `~/.config/obs-studio/plugins/LowerThirdsPlus/bin/64bit/` on Linux), then restart OBS.
+
+### Option B: Run OBS inside Docker with Lower Thirds Plus loaded
+
+The plugin is built from your current source in the image (no host/old plugin). Runtime uses OBS 30.x (PPA) to match the plugin.
+
+```bash
+# Build image that runs OBS with the plugin (default target is runtime)
+docker build -f docker/Dockerfile -t lowerthirdsplus .
+
+# Run OBS (plugin is loaded; “Lower Thirds Plus Source” appears in Add Source)
+docker run -it --rm lowerthirdsplus
+```
+
+OBS runs under a virtual display (Xvfb) inside the container. To see the OBS GUI on your machine, run with X11 forwarding:
+
+```bash
+# macOS: install XQuartz, then allow network clients. Linux: usually works.
+docker run -it --rm -e DISPLAY=host.docker.internal:0 -e QT_QPA_PLATFORM=xcb lowerthirdsplus
+# (On Linux host use -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix)
+```
+
+**Note:** Docker cannot build the **macOS** `.plugin` (Docker runs Linux containers only). For macOS, use the local build below or the GitHub Actions workflow.
+
+---
+
+## 🍎 Building for macOS (local or CI)
+
+**On your Mac:** use the [Quick Build](#-quick-build) (`./build.sh ~/Development/obs-studio`) or build from source as in [Building from Source](#-building-from-source).
+
+**Automated macOS build (no Docker):** Push to GitHub and use the **Build macOS** workflow. It runs on `macos-14`, builds OBS Studio, then builds LowerThirdsPlus and uploads **LowerThirdsPlus.plugin** as an artifact. Download it from the Actions run (Artifacts → LowerThirdsPlus-macOS).
 
 ---
 
@@ -210,6 +289,17 @@ The plugin will be:
 1. Compiled with CMake
 2. Automatically installed to OBS plugins folder
 3. Ready to use after restarting OBS
+
+### Optional: Dock panel (View → Docks)
+
+A **Lower Thirds Control** dock panel (source list + Play Tab 1–5 + Hide) is implemented but **off by default** because on macOS it requires Qt to match OBS’s; mixing Homebrew Qt with OBS.app’s Qt can cause build errors. To try building with the dock:
+
+- **macOS:** Build OBS from source, then build the plugin with the same Qt (e.g. pass `-DLOWERTHIRDS_BUILD_DOCK=ON` and ensure CMake uses OBS’s Qt).
+- **Linux:** `cmake .. -DLOWERTHIRDS_BUILD_DOCK=ON` when Qt and OBS frontend API are available.
+
+If the dock builds, it appears under **View → Docks → Lower Thirds Control** and **Tools → Lower Thirds Control**.
+
+**Why don’t I see it in View or Tools?** The default build (and the DMG/zip) does **not** include the dock, so there is no panel under View → Docks and no entry under Tools. You still have the **source**: add it via **+ → Add → Lower Thirds Plus Source**. To get the dock and Tools entry, you must build with `-DLOWERTHIRDS_BUILD_DOCK=ON` in an environment where Qt matches OBS (see above).
 
 ---
 
